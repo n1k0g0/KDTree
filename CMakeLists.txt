@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
-project(KDTree)
+project(gorbachev_n_m)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(KDTree prj.test/main.cpp prj.lab/kdtree.h kdtree.cpp)
+add_executable(gorbachev_n_m prj.test/main.cpp prj.lab/kdtree.h kdtree.cpp)
