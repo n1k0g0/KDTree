@@ -1,93 +1,173 @@
 #include "../prj.lab/kdtree.h"
-
-
-
-double Point::distance(const Point& pt) const {
-    double dist = 0;
-    for (size_t i = 0; i < 3; ++i) {
-        double d = get(i) - pt.get(i);
-        dist += d * d;
-    }
-    return dist;
-}
-
-
-
-
-
-
-
-void KDTree::nearest(KDTree::Node *root, const Point &point, int index) {
-    if (root == nullptr)
-        return;
-    ++visited;
-    double d = root->chosenPoint.distance(point);
-    if (best == nullptr || d < bestDist) {
-        bestDist = d;
-        best = root;
-    }
-    if (bestDist == 0)
-        return;
-    double dx = root->chosenPoint.get(index) - point.get(index);
-    index = (index + 1) % 3;
-    nearest(dx > 0 ? root->leftChild : root->rightChild, point, index);
-    if (dx * dx >= bestDist)
-        return;
-    nearest(dx > 0 ? root->rightChild : root->leftChild, point, index);
-
-}
-
-const Point& KDTree::nearest(const Point& pt) {
-    if (root == nullptr)
-        throw std::logic_error("tree is empty");
-    best = nullptr;
-    visited = 0;
-    bestDist = 0;
-    nearest(root, pt, 0);
-    return best->chosenPoint;
-}
-
-
+#include <iostream>
+#include <chrono>
 
 std::ostream& operator<<(std::ostream& out, const Point& pt) {
     out << '(';
     for (size_t i = 0; i < 3; ++i) {
         if (i > 0)
             out << ", ";
-        out << pt.get(i);
+        out << pt.getCoordByIdx(i);
     }
     out << ')';
     return out;
 }
 
 
-void test1() {
+const Point& bruteClosestPoint(const Point& pt, const std::vector<Point>& inputVector) {
+    double bestDist = 0;
+    Point best = Point();
+    double d;
+    int i;
+    for (i = 0; i < inputVector.size(); ++i){
 
-    std::vector<Point> inVector = {{1, 3, 4},
-                      {2, 2, 5},
-                      {3, 2, 4},
-                      {4, 1, 5},
-                      {5, 1, 4},
-                      };
+        d = pt.getDistance(inputVector[i]);
+        if ((d < bestDist) || (bestDist == 0)) {
+            bestDist = d;
+            best = inputVector[i];
+        }
 
+    }
+    //std::cout << best << " " << std::sqrt(bestDist) << std::endl;
+    return best;
 
-
-    KDTree tree(inVector);
-
-
-    Point n = tree.nearest({10, 2, 5});
-
-    std::cout << "Input data:\n";
-    std::cout << "closest Point: " << n << '\n';
-    std::cout << "distance: " << Point({10,2,5}).distance(n) << '\n';
 }
 
+
+
+
+void test1() {
+
+    std::cout << "test1" << std::endl;
+  //  Point points[] = { { 2, 3 , 5}, { 5, 4, 1}, { 9, 6, 8 }, { 4, 7, 1 }, { 8, 1, 2 }, { 7, 2, 4 } };
+    auto createVectorStart = std::chrono::high_resolution_clock::now();
+    std::vector<Point> points;
+    points.resize(1000000);
+
+    for (int i = 0; i < points.size(); ++i){
+        points[i] = Point{1.0f * i, 2.0f * i,3.0f * i };
+    }
+    auto createVectorFinish = std::chrono::high_resolution_clock::now();
+    auto createVectorDuration = std::chrono::duration_cast<std::chrono::microseconds>(createVectorFinish - createVectorStart);
+
+    auto buildTreeStart = std::chrono::high_resolution_clock::now();
+    KDTree tree(std::begin(points), std::end(points));
+    auto buildTreeFinish = std::chrono::high_resolution_clock::now();
+    auto buildTreeDuration = std::chrono::duration_cast<std::chrono::microseconds>(buildTreeFinish - buildTreeStart);
+
+    auto searchTreeStart = std::chrono::high_resolution_clock::now();
+    Point n = tree.closestPoint({9, 2, 1});
+    auto searchTreeFinish = std::chrono::high_resolution_clock::now();
+    auto searchTreeDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(searchTreeFinish - searchTreeStart);
+
+    auto bruteForceStart = std::chrono::high_resolution_clock::now();
+    Point m = bruteClosestPoint({9, 2, 1}, points);
+    auto bruteForceFinish = std::chrono::high_resolution_clock::now();
+    auto bruteForceDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(bruteForceFinish - bruteForceStart);
+
+    auto buildTree8Start = std::chrono::high_resolution_clock::now();
+    KDTree tree8(std::begin(points), std::end(points), 8);
+    auto buildTree8Finish = std::chrono::high_resolution_clock::now();
+    auto buildTree8Duration = std::chrono::duration_cast<std::chrono::microseconds>(buildTree8Finish - buildTree8Start);
+
+    auto searchTree8Start = std::chrono::high_resolution_clock::now();
+    Point kN = tree8.kClosestPoints({9, 2, 1}, 8);
+    auto searchTree8Finish = std::chrono::high_resolution_clock::now();
+    auto searchTree8Duration = std::chrono::duration_cast<std::chrono::nanoseconds>(searchTree8Finish - searchTree8Start);
+
+    std::cout << "closestPointFromIdxStep point: " << n << '\n';
+    std::cout << "brute force closet Point found: " << m << '\n';
+    std::cout << "KDTree & bruteForce resulting point  " << kN << '\n';
+    std::cout << "getDistance: " << tree.distance() << '\n';
+    std::cout << "nodes visited: " << tree.totalVisited() << '\n';
+    std::cout << "get Distance by bruteForce: " << std::sqrt(m.getDistance({9, 2, 1})) << '\n' << '\n' << '\n';
+
+    std::cout << "process Vector duration: " << createVectorDuration.count() << " microseconds" <<'\n';
+    std::cout << "brute force duration: " << bruteForceDuration.count() << " nanoseconds" <<'\n';
+    std::cout << "total bruteForce duration: " << createVectorDuration.count() + bruteForceDuration.count()/1000 << " microseconds" <<'\n' << '\n';
+
+    std::cout << "build tree duration: " << buildTreeDuration.count() << " microseconds" <<'\n';
+    std::cout << "search tree duration: " << searchTreeDuration.count() << " nanoseconds" <<'\n';
+    std::cout << "total tree duration: " << buildTreeDuration.count() + searchTreeDuration.count()/1000 << " microseconds" <<'\n' << '\n';
+
+    std::cout << "build tree for tree&bruteForce duration: " << buildTree8Duration.count() << " microseconds" <<'\n';
+    std::cout << "kdTree & bruteForce search tree duration: " << searchTree8Duration.count() << " nanoseconds" <<'\n';
+    std::cout << "total tree&bf duration: " << buildTree8Duration.count() + searchTree8Duration.count()/1000 << " microseconds" <<'\n' << '\n' << '\n';
+
+}
+
+
+void test2() {
+
+    //  Point points[] = { { 2, 3 , 5}, { 5, 4, 1}, { 9, 6, 8 }, { 4, 7, 1 }, { 8, 1, 2 }, { 7, 2, 4 } };
+
+    std::cout << "test2" << std::endl;
+
+    auto createVectorStart = std::chrono::high_resolution_clock::now();
+    std::vector<Point> points;
+    points.resize(100000);
+
+    for (int i = 0; i < points.size(); ++i){
+        points[i] = Point{1.0f * i, 0, 0 };
+    }
+    auto createVectorFinish = std::chrono::high_resolution_clock::now();
+    auto createVectorDuration = std::chrono::duration_cast<std::chrono::microseconds>(createVectorFinish - createVectorStart);
+
+    auto buildTreeStart = std::chrono::high_resolution_clock::now();
+    KDTree tree(std::begin(points), std::end(points));
+    auto buildTreeFinish = std::chrono::high_resolution_clock::now();
+    auto buildTreeDuration = std::chrono::duration_cast<std::chrono::microseconds>(buildTreeFinish - buildTreeStart);
+
+    auto searchTreeStart = std::chrono::high_resolution_clock::now();
+    Point n = tree.closestPoint({9, 2, 1});
+    auto searchTreeFinish = std::chrono::high_resolution_clock::now();
+    auto searchTreeDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(searchTreeFinish - searchTreeStart);
+
+    auto bruteForceStart = std::chrono::high_resolution_clock::now();
+    Point m = bruteClosestPoint({9, 2, 1}, points);
+    auto bruteForceFinish = std::chrono::high_resolution_clock::now();
+    auto bruteForceDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(bruteForceFinish - bruteForceStart);
+
+    auto buildTree8Start = std::chrono::high_resolution_clock::now();
+    KDTree tree8(std::begin(points), std::end(points), 8);
+    auto buildTree8Finish = std::chrono::high_resolution_clock::now();
+    auto buildTree8Duration = std::chrono::duration_cast<std::chrono::microseconds>(buildTree8Finish - buildTree8Start);
+
+    auto searchTree8Start = std::chrono::high_resolution_clock::now();
+    Point kN = tree8.kClosestPoints({9, 2, 1}, 8);
+    auto searchTree8Finish = std::chrono::high_resolution_clock::now();
+    auto searchTree8Duration = std::chrono::duration_cast<std::chrono::nanoseconds>(searchTree8Finish - searchTree8Start);
+
+    std::cout << "closestPointFromIdxStep point: " << n << '\n';
+    std::cout << "brute force closet Point found: " << m << '\n';
+    std::cout << "KDTree & bruteForce resulting point  " << kN << '\n';
+    std::cout << "getDistance: " << tree.distance() << '\n';
+    std::cout << "nodes visited: " << tree.totalVisited() << '\n';
+    std::cout << "get Distance by bruteForce: " << std::sqrt(m.getDistance({9, 2, 1})) << '\n' << '\n' << '\n';
+
+    std::cout << "process Vector duration: " << createVectorDuration.count() << " microseconds" <<'\n';
+    std::cout << "brute force duration: " << bruteForceDuration.count() << " nanoseconds" <<'\n';
+    std::cout << "total bruteForce duration: " << createVectorDuration.count() + bruteForceDuration.count()/1000 << " microseconds" <<'\n' << '\n';
+
+    std::cout << "build tree duration: " << buildTreeDuration.count() << " microseconds" <<'\n';
+    std::cout << "search tree duration: " << searchTreeDuration.count() << " nanoseconds" <<'\n';
+    std::cout << "total tree duration: " << buildTreeDuration.count() + searchTreeDuration.count()/1000 << " microseconds" <<'\n' << '\n';
+
+    std::cout << "build tree for tree&bruteForce duration: " << buildTree8Duration.count() << " microseconds" <<'\n';
+    std::cout << "kdTree & bruteForce search tree duration: " << searchTree8Duration.count() << " nanoseconds" <<'\n';
+    std::cout << "total tree&bf duration: " << buildTree8Duration.count() + searchTree8Duration.count()/1000 << " microseconds" <<'\n' << '\n' << '\n';
+
+}
+
+
+
+
 int main() {
-    std::cout << "here";
     try {
         test1();
         std::cout << '\n';
-
+        test2();
+        std::cout << '\n';
     } catch (const std::exception& e) {
         std::cerr << e.what() << '\n';
     }
