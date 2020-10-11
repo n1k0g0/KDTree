@@ -2,53 +2,74 @@
 #include <array>
 #include <cmath>
 #include <iostream>
+#include <random>
 #include <vector>
+#include <tgmath.h>
 
+#ifndef KDTREE1_KDTREE_H
+#define KDTREE1_KDTREE_H
 
 
 class Point {
 public:
-    Point() : coordinates() {}
+
+    Point() = default;
+    Point(std::array<float, 3>) {}
     Point(std::initializer_list<float> list) {
-        std::copy_n(list.begin(), 3, coordinates.begin());
+        std::copy_n(list.begin(), coordinates.size(), coordinates.begin());
     }
-    float get(size_t index) const {
+    float getCoordByIdx(size_t index) const {
         return coordinates[index];
     }
-    double distance(const Point& pt) const;
+    double getDistance(const Point& pt) const {
+        double dist = 0;
+        for (size_t i = 0; i < coordinates.size(); ++i) {
+            double d = getCoordByIdx(i) - pt.getCoordByIdx(i);
+            dist += d * d;
+        }
+        return dist;
+    }
 private:
     std::array<float, 3> coordinates;
 };
 
-std::vector<Point> inputVector = {};
+
 
 
 
 class KDTree {
+
 private:
+
+
     struct Node {
-        Node() : leftChild(0), rightChild(0), pointNumbersAroundChosenPoint(0){
-            chosenPoint = Point({0,0,0});
-        }
-        Node(Point inputPoint) : leftChild(0), rightChild(0), pointNumbersAroundChosenPoint(0){
-            chosenPoint = inputPoint;
-        }
-        Node(Point inputPoint, std::vector<int> inputNumbersOfPoints, Node inputLeftChild, Node inputRightChild) {
-            pointNumbersAroundChosenPoint.clear();
-            for (int i = 1; i <= inputNumbersOfPoints.size(); ++i){
-                pointNumbersAroundChosenPoint.push_back(inputNumbersOfPoints[i]);
-            }
-            leftChild = &inputLeftChild;
-            rightChild = &inputRightChild;
-            chosenPoint = inputPoint;
-        }
 
 
+        Node(const Point& inputPoint) : pivotPoint(inputPoint),
+                                        leftChildNode(nullptr), rightChildNode(nullptr){}
 
-        Point chosenPoint;
-        std::vector<int> pointNumbersAroundChosenPoint; //bounding box
-        Node* leftChild;
-        Node* rightChild;
+        float getPointCoordByIdx(size_t index) const {
+            return pivotPoint.getCoordByIdx(index);
+        }
+
+        double distance(const Point& pt) const {
+            return pivotPoint.getDistance(pt);
+        }
+
+        Point pivotPoint;
+        Node* leftChildNode;
+        Node* rightChildNode;
+
+    };
+
+    struct ComparableElements {
+
+        ComparableElements(size_t index) : coordIdx(index) {}
+        bool operator()(const Node& n1, const Node& n2) const {
+            return n1.pivotPoint.getCoordByIdx(coordIdx) < n2.pivotPoint.getCoordByIdx(coordIdx);
+        }
+        size_t coordIdx;
+
     };
 
 
@@ -57,97 +78,159 @@ private:
 
 
 
-
-
-
-    Node buildTree(std::vector<int> numbersOfInputNodes, int depth){
-        int axis = depth % 3;
-        switch (axis){
-            case 0: std::sort(numbersOfInputNodes.begin(), numbersOfInputNodes.end(), comparePointsByX);
-            case 1: std::sort(numbersOfInputNodes.begin(), numbersOfInputNodes.end(), comparePointsByY);
-            default: std::sort(numbersOfInputNodes.begin(), numbersOfInputNodes.end(), comparePointsByZ);
-        }
-
-
-        if (numbersOfInputNodes.size() == 1){
-            std::cout << 'Here';
-            return Node(inputVector[numbersOfInputNodes[0]]);
-        }
-
-        std::vector<int> smallerPointsNumbers;
-        int i = 0;
-        for (i = 0; i < numbersOfInputNodes.size() / 2; ++i){
-            smallerPointsNumbers.push_back(numbersOfInputNodes[i]);
-        }
-
-        std::vector<int> biggerPointsNumbers;
-        for (; i < numbersOfInputNodes.size(); ++i){
-            biggerPointsNumbers.push_back(numbersOfInputNodes[i]);
-        }
-
-        int medianPointNumber = biggerPointsNumbers[0];
-
-
-        return Node(inputVector[medianPointNumber],
-                numbersOfInputNodes,
-                buildTree(smallerPointsNumbers, depth + 1),
-                buildTree(biggerPointsNumbers, depth + 1));
-
+    Node* buildTree(size_t begin, size_t end, size_t index){
+        if (end <= begin)
+            return nullptr;
+        size_t middle = begin + (end - begin) / 2;
+        std::nth_element(&nodeVector[begin], &nodeVector[middle], &nodeVector[0] + end, ComparableElements(index));
+        index = (index + 1) % 3;
+        nodeVector[middle].leftChildNode = buildTree(begin, middle, index);
+        nodeVector[middle].rightChildNode = buildTree(middle + 1, end, index);
+        return &nodeVector[middle];
     }
-    void nearest(Node* root, const Point& point, int index);
+
+    Node* kNearestBuildTree(size_t begin, size_t end, size_t step, size_t k){
+        if (end <= begin)
+            return nullptr;
+        size_t middle = begin + (end - begin) / 2;
+        std::nth_element(&nodeVector[begin], &nodeVector[middle], &nodeVector[0] + end, ComparableElements(step % 3));
+        ++step;
+        size_t index = step % 3;
+        if (step < log2 (nodeVector.size() / k)){
+            nodeVector[middle].leftChildNode = kNearestBuildTree(begin, middle, step, k);
+            nodeVector[middle].rightChildNode = kNearestBuildTree(middle + 1, end, step, k);
+
+        }
+        return &nodeVector[middle];
+    }
 
 
 
 
+    void closestPointFromIdxStep(Node* tRoot, const Point& point, int index){
+        if (tRoot == nullptr)
+            return;
+        ++visited;
+        double d = tRoot->distance(point);
+        if (d < bestDist || best == nullptr) {
+            bestDist = d;
+            best = tRoot;
+        }
+
+        double dx = tRoot->getPointCoordByIdx(index) - point.getCoordByIdx(index);
+        index = (index + 1) % 3;
+        closestPointFromIdxStep(dx > 0 ? tRoot->leftChildNode : tRoot->rightChildNode, point, index);
+
+        if (bestDist <= dx * dx) // this here added
+            return;
+        closestPointFromIdxStep(dx > 0 ? tRoot->rightChildNode : tRoot->leftChildNode, point, index);
+    };
 
 
+    void kClosestPointsFromIdxStep(Node* tRoot, const Point& point, int k, int step, size_t begin, size_t end){
+        if (tRoot == nullptr)
+            return;
+        ++visited;
+
+        double d = tRoot->distance(point);
+        if (d < bestDist || best == nullptr) {
+            bestDist = d;
+            best = tRoot;
+        }
+
+        double dx = tRoot->getPointCoordByIdx(step % 3) - point.getCoordByIdx(step % 3);
+
+
+        ++step;
+        size_t index = step % 3;
+
+        
+
+
+        if (step < log2 (nodeVector.size() / k)){
+            kClosestPointsFromIdxStep(dx > 0 ? tRoot->leftChildNode : tRoot->rightChildNode, point, k, step, begin, begin + (end - begin) / 2);
+            if (bestDist <= dx * dx) // this here added
+                return;
+            kClosestPointsFromIdxStep(dx > 0 ? tRoot->rightChildNode : tRoot->leftChildNode, point, k, step, begin + (end - begin) / 2 + 1, end);
+
+        }
+
+
+
+        if ((step >= log2(nodeVector.size() / k)) && (step < log2(nodeVector.size()))){
+
+            int i;
+            for (i = 0; i < end - begin; ++i){
+
+                d = point.getDistance(nodeVector[i + begin].pivotPoint);
+                if ((d < bestDist) || (bestDist == 0)) {
+                    bestDist = d;
+                    best = &nodeVector[i + begin];
+                }
+
+            }
+        }
+
+
+        return;
+
+    };
+
+
+
+
+    std::vector<Node> nodeVector;
     Node* root = nullptr;
     Node* best = nullptr;
     double bestDist = 0;
     size_t visited = 0;
 
+
 public:
-    static bool comparePointsByX (int i, int j) {
-        return inputVector[i].get(0) < inputVector[j].get(0);
+
+    KDTree(const KDTree&) = delete;
+    KDTree& operator=(const KDTree&) = delete;
+
+
+    template<typename iterator>
+    KDTree(iterator begin, iterator end) : nodeVector(begin, end) {
+        root = buildTree(0, nodeVector.size(), 0);
     }
-    static bool comparePointsByY (int i, int j) {
-        return inputVector[i].get(1) < inputVector[j].get(1);
-    }
-    static bool comparePointsByZ (int i, int j) {
-        return inputVector[i].get(2) < inputVector[j].get(2);
-    }
 
-
-    KDTree(std::vector<Point> inputPoints){
-
-
-        std::vector<int> numbersOfPointsInBoundingBox = {};
-        for (int i = 0; i < inputPoints.size(); ++i){
-            inputVector.push_back(inputPoints[i]);
-            numbersOfPointsInBoundingBox.push_back(i);
-        }
-
-        *root = buildTree(numbersOfPointsInBoundingBox, 0);
+    template<typename iterator>
+    KDTree(iterator begin, iterator end, int k) : nodeVector(begin, end) {
+        root = kNearestBuildTree(0, nodeVector.size(), 0, k);
     }
 
 
+    size_t totalVisited() const { return visited; }
 
-    KDTree(std::vector<Point> inputPoints, int depth){
-
-        std::vector<int> numbersOfPointsInBoundingBox;
-        numbersOfPointsInBoundingBox.clear();
-        for (int i = 0; i < inputPoints.size(); ++i){
-            inputVector.push_back(inputPoints[i]);
-            numbersOfPointsInBoundingBox.push_back(i);
-        }
-        int axis = depth % 3;
-        *root = buildTree(numbersOfPointsInBoundingBox, depth);
+    double distance() const { return std::sqrt(bestDist); }
 
 
-
+    const Point& closestPoint(const Point& pt) {
+        if (root == nullptr)
+            throw std::logic_error("tree is empty");
+        best = nullptr;
+        visited = 0;
+        bestDist = 0;
+        closestPointFromIdxStep(root, pt, 0);
+        return best->pivotPoint;
     }
 
-    const Point& nearest(const Point& pt);
+    const Point& kClosestPoints(const Point& pt, int k) {
+        if (root == nullptr)
+            throw std::logic_error("tree is empty");
+        best = nullptr;
+        visited = 0;
+        bestDist = 0;
+        kClosestPointsFromIdxStep(root, pt, k, 0, 0, nodeVector.size());
+        return best->pivotPoint;
+    }
 
 
 };
+
+
+
+#endif //KDTREE1_KDTREE_H
