@@ -4,7 +4,7 @@
 #include<chrono>
 #include<cassert>
 #include<algorithm>
-#include"../prj.lab/VPTree/VPTree.h"
+#include"../../prj.lab/VPTree/VPTree.h"
 #define RANGEMAX 10
 #ifdef NDEBUG
 std::default_random_engine g(std::random_device {}());
