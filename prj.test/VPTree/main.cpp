@@ -4,7 +4,7 @@
 #include<chrono>
 #include<cassert>
 #include<algorithm>
-#include"../../prj.lab/VPTree/VPTree.h"
+#include"../prj.lab/vp3.h"
 #define RANGEMAX 10
 #ifdef NDEBUG
 std::default_random_engine g(std::random_device {}());
@@ -14,6 +14,18 @@ std::default_random_engine g(0);
 
 std::uniform_real_distribution<float> d(0, RANGEMAX);
 std::vector<Point> randomPoints(float);
+
+std::vector<Point> randomPoints(float num)
+{
+    std::vector<Point> points;
+    points.reserve(num);
+    for (decltype(num) i = 0; i < num; i++)
+    {
+        points.push_back(Point({d(g), d(g), d(g)}));
+    }
+
+    return points;
+}
 
 int main(int argNum, char** args) {
     int particleNum = 4;
@@ -40,14 +52,11 @@ int main(int argNum, char** args) {
     for (auto &r : results)
         pairsum += r.size();
 
-
     std::cout << "build tree duration: " << buildTreeDuration << " seconds" << std::endl;
-    std::cout << "pair sum: " << pairsum << std::endl;
     std::cout << "search tree duration: " << searchTreeDuration << " seconds" << std::endl;
     std::cout << "total tree duration: " << (searchTreeDuration + buildTreeDuration) << " seconds" << std::endl << std::endl;
 
-
-    int directPairNum = 0;
+    int bruteSearchNum = 0;
     auto directResult = std::vector<std::vector<Point>>(particleNum);
     auto t5 = std::chrono::high_resolution_clock::now();
     for (decltype(points.size()) i = 0; i < points.size(); i++) {
@@ -56,10 +65,10 @@ int main(int argNum, char** args) {
         });
     }
     auto t6 = std::chrono::high_resolution_clock::now();
-    auto directSearchTime = std::chrono::duration_cast<std::chrono::duration<double>>(t6 - t5).count();
+    auto bruteSearchTime = std::chrono::duration_cast<std::chrono::duration<double>>(t6 - t5).count();
 
-    std::cout << "direct search" << std::endl;
-    std::cout << "search time: " << directSearchTime << " seconds" << std::endl;
+    std::cout << "brute search" << std::endl;
+    std::cout << "search time: " << bruteSearchTime << " seconds" << std::endl;
 
     return 0;
 
@@ -89,14 +98,3 @@ int main(int argNum, char** args) {
     results[0][0].printPoint();
 }*/
 
-std::vector<Point> randomPoints(float num)
-{
-    std::vector<Point> points;
-    points.reserve(num);
-    for (decltype(num) i = 0; i < num; i++)
-    {
-        points.push_back(Point({d(g), d(g), d(g)}));
-    }
-
-    return points;
-}
