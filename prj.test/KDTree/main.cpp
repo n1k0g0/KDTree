@@ -1,6 +1,7 @@
 #include "../prj.lab/kdtree.h"
 #include <iostream>
 #include <chrono>
+#include <fstream>
 
 std::ostream& operator<<(std::ostream& out, const Point& pt) {
     out << '(';
@@ -159,14 +160,78 @@ void test2() {
 
 }
 
+void test3() {
+
+    auto createVectorStart = std::chrono::high_resolution_clock::now();
+    std::vector<Point> points;
+    points.resize(100000);
+
+    for (int i = 0; i < points.size(); ++i){
+        points[i] = Point{1.0f * i, 0, 0 };
+    }
+    auto createVectorFinish = std::chrono::high_resolution_clock::now();
+    auto createVectorDuration = std::chrono::duration_cast<std::chrono::microseconds>(createVectorFinish - createVectorStart);
+    auto bruteForceStart = std::chrono::high_resolution_clock::now();
+    Point m = bruteClosestPoint({9, 2, 1}, points);
+    auto bruteForceFinish = std::chrono::high_resolution_clock::now();
+    auto bruteForceDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(bruteForceFinish - bruteForceStart);
+
+
+
+
+    int treeSearchTotal[16];
+    int treeTotal[16];
+    for (int i = 1; i < 17; ++i){
+        treeSearchTotal[i - 1] = 0;
+        treeTotal[i - 1] = 0;
+    }
+    std::string amountStandardTreeStr;
+    amountStandardTreeStr = "";
+
+    for (int j = 0; j < 10; j++) {
+        for (int i = 1; i < 17; ++i) {
+
+            auto buildTree8Start = std::chrono::high_resolution_clock::now();
+            KDTree tree8(std::begin(points), std::end(points), i);
+            auto buildTree8Finish = std::chrono::high_resolution_clock::now();
+            auto buildTree8Duration = std::chrono::duration_cast<std::chrono::microseconds>(
+                    buildTree8Finish - buildTree8Start);
+            auto searchTree8Start = std::chrono::high_resolution_clock::now();
+            Point kN = tree8.kClosestPoints({9, 2, 1}, i);
+            auto searchTree8Finish = std::chrono::high_resolution_clock::now();
+            auto searchTree8Duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    searchTree8Finish - searchTree8Start);
+            treeSearchTotal[i - 1] += searchTree8Duration.count() / 1000;
+            treeTotal[i - 1] += treeSearchTotal[i - 1] + buildTree8Duration.count();
+        }
+    }
+
+    for (int i = 1; i < 17; ++i){
+        amountStandardTreeStr += std::to_string(treeSearchTotal[i] / 10);
+        amountStandardTreeStr += ", ";
+    }
+
+    for (int i = 1; i < 17; ++i) {
+        amountStandardTreeStr += std::to_string(treeTotal[i] / 10);
+        amountStandardTreeStr += ", ";
+    }
+
+
+    std::ofstream outputFile("data.txt", std::ofstream::binary);
+    std::cout << std::to_string(createVectorDuration.count() + bruteForceDuration.count()/1000) << ", " << std::to_string( bruteForceDuration.count()/1000) << ", " << amountStandardTreeStr << std::endl;
+    outputFile << std::to_string(createVectorDuration.count() + bruteForceDuration.count()/1000) << ", " << std::to_string( bruteForceDuration.count()/1000) << ", " << amountStandardTreeStr << std::endl;
+    outputFile.close();
+
+
+
+}
+
 
 
 
 int main() {
     try {
-        test1();
-        std::cout << '\n';
-        test2();
+        test3();
         std::cout << '\n';
     } catch (const std::exception& e) {
         std::cerr << e.what() << '\n';
