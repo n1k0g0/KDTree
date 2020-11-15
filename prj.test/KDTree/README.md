@@ -58,6 +58,9 @@ KD-дерево (KDTree) – это структура данных с разб
 
 Результаты замеров времени для каждого `i` в сравнении с результатом простого перебора приведены в графиках ниже. Приведенные графики построены по выходным данном описанной функции.
 
+![tree search time vs leaf points number](plots/tree_search_time_in_relation_to_its_leaf_points_number.png "Время поиска по дереву в зависимости от m элементов на листах") 
 
+![tree total time vs vector total time](plots/tree_vs_vector_in_total.png "Суммарное время затраченное на дерево и на простой перебор посредством векторов") 
 
+![tree search time vs vector search time](plots/tree_vs_vector_while_searching_only.png "Время поиска по дереву в сравнении с простым перебором посредством векторов") 
 
