@@ -52,3 +52,5 @@ VP-дерево представляет собой двоичное дерев�
 
 ![alt text](plots/plot1.png "Title")
 
+![alt text](plots/plot2.png "Title")
+
