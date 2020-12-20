@@ -29,7 +29,7 @@
 
 Полученной матрицей преобразуем все точки треугольника внутри функции `main.cpp`, затем отрисуем результат в colab.
 
-![alt text](distorted1.png "Target Points")
+![alt text](distorted2.png "Target Points")
 
 #### Приближенное аффинное преобразование 
 
