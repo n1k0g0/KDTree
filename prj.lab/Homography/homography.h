@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <random>
-#include "/usr/local/Cellar/eigen/3.3.8_1/include/eigen3/Eigen/Dense"
+#include "eigen/3.3.8_1/include/eigen3/Eigen/Dense"
 
 class Homograph {
 public:
