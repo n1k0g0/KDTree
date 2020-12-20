@@ -1,8 +1,8 @@
-#include <random>
 #include <iostream>
-#include "../prj.lab/homography.h"
-#include "/usr/local/Cellar/eigen/3.3.8_1/include/eigen3/Eigen/Core"
-#include "/usr/local/Cellar/eigen/3.3.8_1/include/eigen3/Eigen/Dense"
+#include <random>
+#include "../../prj.lab/Homography/homography.h"
+#include "eigen/3.3.8_1/include/eigen3/Eigen/Core"
+#include "eigen/3.3.8_1/include/eigen3/Eigen/Dense"
 
 int main() {
     Homograph g;
